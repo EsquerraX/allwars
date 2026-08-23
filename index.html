@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ALL WARS</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f59e0b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Fredoka',sans-serif}
+body{background:#1a0f0a;overflow:hidden;width:100vw;height:100vh}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.active{display:flex}
+.btn{background:linear-gradient(180deg,#fbbf24,#f59e0b);border:3px solid #000;border-radius:16px;padding:14px 28px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 #000}
+.btn:active{transform:translateY(4px);box-shadow:none}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+</style>
+</head>
+<body>
+<div id="splash" class="screen active" style="align-items:center;justify-content:center;background:url('icon-512.png') center/cover">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.6))"></div>
+<div style="position:relative;z-index:2;text-align:center">
+<h1 style="font-size:64px;color:#fbbf24;-webkit-text-stroke:4px #000;text-shadow:0 6px 0 #000;animation:pulse 2s infinite">ALL WARS</h1>
+<div style="margin-top:80px;animation:bounce 1.2s infinite"><p style="color:#fff;text-shadow:0 2px 0 #000;font-size:18px">▼ TOCA PARA CONTINUAR ▼</p></div>
+</div>
+</div>
+
+<div id="menu" class="screen" style="align-items:center;justify-content:center;background:url('icon-512.png') center/cover">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px)"></div>
+<div style="position:relative;z-index:2;width:90%;max-width:340px;display:flex;flex-direction:column;gap:14px">
+<h1 style="font-size:50px;text-align:center;color:#fbbf24;-webkit-text-stroke:3px #000">ALL WARS</h1>
+<button class="btn" onclick="showScreen('phases')">▶ INICIAR</button>
+<button class="btn" style="background:#555;color:#999" onclick="alert('Tienda bloqueada 🔒')">🛒 TIENDA 🔒</button>
+<button class="btn" onclick="showScreen('config')">⚙️ CONFIGURACIÓN</button>
+<button class="btn" style="background:linear-gradient(180deg,#ef4444,#dc2626);color:#fff" onclick="if(confirm('¿Salir?')) window.close();">✕ SALIR</button>
+</div>
+</div>
+
+<div id="phases" class="screen" style="background:#2a1a0a;padding:20px">
+<h2 style="color:#fbbf24;font-size:28px;-webkit-text-stroke:2px #000">FASES</h2>
+<div style="margin-top:20px;background:linear-gradient(180deg,#fbbf24,#d97706);border:4px solid #000;border-radius:20px;padding:14px;cursor:pointer" onclick="showScreen('levels')">
+<div style="height:110px;border-radius:12px;border:3px solid #000;background:url('icon-512.png') center/cover"></div>
+<h3 style="margin-top:8px">FASE 1 - DESIERTO DE SLIMES</h3><p style="font-size:12px">6 niveles</p>
+</div>
+<button class="btn" style="margin-top:auto" onclick="showScreen('menu')">← VOLVER</button>
+</div>
+
+<div id="levels" class="screen" style="background:#2a1a0a;padding:20px">
+<h2 style="color:#fbbf24">FASE 1 - NIVELES</h2>
+<div id="levelsGrid" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+<button class="btn" style="margin-top:auto" onclick="showScreen('phases')">← FASES</button>
+</div>
+
+<div id="config" class="screen" style="align-items:center;justify-content:center;background:#1a0f0a;padding:20px">
+<div style="background:#fff;border:4px solid #000;border-radius:20px;padding:20px;width:100%;max-width:300px">
+<h2>CONFIGURACIÓN</h2><p style="font-size:12px;margin-top:8px">Sonido por ahora</p>
+<div style="margin-top:12px;display:flex;justify-content:space-between"><span>🔊 Sonido</span><button id="soundBtn" class="btn" onclick="this.innerText=this.innerText==='ON'?'OFF':'ON'">ON</button></div>
+<button class="btn" style="margin-top:16px;width:100%" onclick="showScreen('menu')">VOLVER</button>
+</div>
+</div>
+
+<div id="game" class="screen" style="background:#000">
+<iframe id="gameFrame" style="width:100%;height:100%;border:0"></iframe>
+<div style="position:absolute;top:6px;left:6px;z-index:10"><button class="btn" style="padding:6px 10px;font-size:12px" onclick="showScreen('levels')">← NIVELES</button></div>
+<div style="position:absolute;top:6px;right:6px;z-index:10"><button class="btn" style="padding:6px 10px;font-size:12px" onclick="showScreen('menu')">🏠 INICIO</button></div>
+</div>
+
+<script>
+let starsData=JSON.parse(localStorage.getItem('allwars_stars')||'{}');
+function showScreen(id){
+document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+if(id==='levels')renderLevels();
+if(id==='game')loadGame();
+}
+document.getElementById('splash').onclick=()=>showScreen('menu');
+function renderLevels(){
+let g=document.getElementById('levelsGrid');g.innerHTML='';
+for(let i=1;i<=6;i++){
+let unlock=i===1||starsData[i-1];
+let st=starsData[i]||0;
+let d=document.createElement('div');
+d.style.cssText='background:'+(unlock?'linear-gradient(180deg,#fbbf24,#d97706)':'#444')+';border:4px solid #000;border-radius:16px;padding:10px;text-align:center;opacity:'+(unlock?1:.6);
+d.innerHTML='<div style=height:60px;border-radius:8px;border:2px solid #000;background:url(icon-512.png) center/cover></div><h4>NIVEL '+i+'</h4><div>'+('★'.repeat(st)+'☆'.repeat(3-st))+'</div>'+(!unlock?'🔒':'');
+if(unlock)d.onclick=()=>{showScreen('game');};
+g.appendChild(d);
+}
+}
+function loadGame(){
+document.getElementById('gameFrame').src='game.html';
+}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+</script>
+</body>
+</html>

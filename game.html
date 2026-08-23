@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ALL WARS - Nivel</title>
+<style>
+body{margin:0;background:#1a0f0a;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}
+#hud{position:absolute;top:0;left:0;right:0;padding:8px;display:flex;justify-content:space-between;pointer-events:none}
+.badge{background:rgba(0,0,0,.7);border:2px solid #000;color:#fbbf24;padding:4px 8px;border-radius:8px;font-family:monospace;font-weight:800}
+</style>
+</head>
+<body>
+<div id="hud"><div class="badge" id="hudWave">WAVE 1</div><div class="badge" id="hudHp">HP 100</div></div>
+<canvas id="c"></canvas>
+<script type="module">
+// MODULAR ORIGINAL - conserva tu arte (icon-512.png) pero carga por partes para A03s
+import {Assets} from './js/modules/assets.js';
+
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d',{alpha:false, desynchronized:true});
+let W,H; function resize(){W=canvas.width=innerWidth; H=canvas.height=innerHeight} resize(); addEventListener('resize',resize);
+
+const CONFIG={MAX_SLIMES:12, SPAWN_DELAY:1800, TARGET_FPS:30, SPEED:0.65};
+
+let slimes=[], exps=[], particles=[], wave=1, lastSpawn=0, lastFrame=0, score=0;
+const player={x:0,y:0,hp:100}; 
+
+async function boot(){
+  // FASE 1: solo esenciales (tu arte original)
+  await Assets.loadEssential(); // carga arquero_indio y slime_natural originales
+  player.x=W/2; player.y=H/2;
+  requestAnimationFrame(loop);
+  // FASE 2: extras en background
+  Assets.loadExtras();
+}
+
+function spawnSlime(){
+  if(slimes.length>=CONFIG.MAX_SLIMES) return;
+  slimes.push({x:Math.random()>0.5?-40:W+40, y:Math.random()*H, hp:2+wave*0.2, speed:0.55*CONFIG.SPEED, anim:Math.random()});
+}
+
+function loop(now){
+  requestAnimationFrame(loop);
+  if(now-lastFrame < 1000/CONFIG.TARGET_FPS) return;
+  let dt=now-lastFrame; lastFrame=now;
+
+  if(now-lastSpawn>CONFIG.SPAWN_DELAY){
+    lastSpawn=now;
+    for(let i=0;i<2;i++) spawnSlime();
+    wave+=0.08;
+    document.getElementById('hudWave').innerText='WAVE '+wave.toFixed(1)+' SLIMES '+slimes.length+'/12';
+  }
+
+  // UPDATE por modulo slimes
+  for(let i=slimes.length-1;i>=0;i--){
+    let s=slimes[i];
+    let dx=player.x-s.x, dy=player.y-s.y, d=Math.hypot(dx,dy)||1;
+    s.x+=(dx/d)*s.speed*dt*0.1; s.y+=(dy/d)*s.speed*dt*0.1; s.anim+=0.04;
+    if(d<36){
+      s.hp-=0.12; player.hp-=0.12;
+      document.getElementById('hudHp').innerText='HP '+(player.hp|0);
+      if(s.hp<=0){
+        if(exps.length<25) exps.push({x:s.x,y:s.y});
+        if(particles.length<15) particles.push({x:s.x,y:s.y,life:12});
+        slimes.splice(i,1); score+=10;
+      }
+    }
+  }
+  for(let i=exps.length-1;i>=0;i--){
+    let e=exps[i]; let dx=player.x-e.x, dy=player.y-e.y, d=Math.hypot(dx,dy);
+    if(d<22){exps.splice(i,1); score+=5; continue}
+    if(d<130){e.x+=dx*0.04; e.y+=dy*0.04;}
+  }
+  for(let i=particles.length-1;i>=0;i--){ particles[i].life--; if(particles[i].life<=0) particles.splice(i,1); }
+
+  // RENDER con culling
+  ctx.fillStyle='#2a1a0a'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#fbbf24';
+  for(let e of exps){ ctx.beginPath(); ctx.arc(e.x,e.y,6,0,6.28); ctx.fill(); }
+
+  let slimeImg=Assets.cache['slime'];
+  let archerImg=Assets.cache['archer'];
+  for(let s of slimes){
+    if(s.x<-70||s.x>W+70||s.y<-70||s.y>H+70) continue;
+    if(slimeImg && slimeImg.complete) {
+      let sz=38+Math.sin(s.anim*2)*2;
+      ctx.drawImage(slimeImg, s.x-sz/2, s.y-sz/2, sz, sz);
+    } else { ctx.fillStyle='#4caf50'; ctx.fillRect(s.x-14,s.y-14,28,28); }
+  }
+  if(archerImg && archerImg.complete){
+    ctx.drawImage(archerImg, player.x-28, player.y-28,56,56);
+  } else {
+    ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(player.x,player.y,18,0,6.28); ctx.fill();
+  }
+  ctx.fillStyle='rgba(255,255,255,0.6)'; for(let p of particles) ctx.fillRect(p.x,p.y,3,3);
+
+  if(player.hp<=0){
+    player.hp=100; slimes=[]; exps=[]; wave=1; score=0;
+    parent.postMessage({type:'levelComplete', stars:1}, '*'); // avisa al menu original
+  }
+}
+
+boot();
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  let t=e.touches[0];
+  player.x+=(t.clientX-player.x)*0.14;
+  player.y+=(t.clientY-player.y)*0.14;
+},{passive:false});
+</script>
+<script type="module" src="js/modules/assets.js"></script>
+</body>
+</html>
